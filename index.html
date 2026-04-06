@@ -3,24 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>8-Puzzle IA - Visual History</title>
+    <title>8-Puzzle AI - Visual History & Alignment Fix</title>
     <style>
         :root {
-            --bg-color: #0b1120;
-            --panel-bg: #1e293b;
-            --tile-bg: #3b82f6;
-            --tile-hover: #60a5fa;
-            --accent: #38bdf8;
-            --text-color: #f8fafc;
-            --border-color: #334155;
-            
-            /* Medidas del tablero principal */
-            --tile-size: 100px;
-            --gap: 10px;
+            --bg-color: #0b1120; /* Color de fondo oscuro */
+            --panel-bg: #1e293b; /* Color de fondo de los paneles */
+            --tile-bg: #3b82f6; /* Color de ficha azul brillante */
+            --text-color: #f8fafc; /* Color de texto claro */
+            --accent-color: #38bdf8; /* Color de acento azul cielo */
+            --tile-hover-bg: #60a5fa; /* Color de ficha al pasar el ratón */
+            --border-color: #334155; /* Color de borde de panel */
         }
 
         body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
             display: flex;
@@ -38,7 +34,7 @@
         }
 
         h1 {
-            color: var(--accent);
+            color: var(--accent-color);
             margin: 0 0 5px 0;
             font-size: 2.5rem;
             letter-spacing: 1px;
@@ -52,7 +48,6 @@
             text-transform: uppercase;
         }
 
-        /* Contenedor principal dividido en 2 columnas */
         .app-container {
             display: flex;
             gap: 40px;
@@ -62,7 +57,7 @@
             justify-content: center;
         }
 
-        /* --- SECCIÓN DEL JUEGO --- */
+        /* --- SECCIÓN DEL JUEGO (PANEL DE JUEGO) --- */
         .game-section {
             background-color: var(--panel-bg);
             padding: 25px;
@@ -75,42 +70,50 @@
         }
 
         .board {
-            position: relative;
-            width: calc((var(--tile-size) * 3) + (var(--gap) * 2));
-            height: calc((var(--tile-size) * 3) + (var(--gap) * 2));
-            background-color: #0f172a;
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-template-rows: repeat(3, 100px);
+            gap: 10px;
+            padding: 10px;
+            background-color: #0f172a; /* Fondo del tablero más oscuro para contraste */
             border-radius: 12px;
-            padding: var(--gap);
-            box-sizing: content-box;
+            margin-bottom: 25px;
+            justify-content: center; /* Centrar el tablero */
+            position: relative;
         }
 
         .tile {
-            position: absolute;
-            width: var(--tile-size);
-            height: var(--tile-size);
-            background: linear-gradient(135deg, var(--tile-bg), #1d4ed8);
+            background-color: var(--tile-bg);
             color: white;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 3rem;
-            font-weight: 800;
+            font-weight: bold;
             border-radius: 12px;
             cursor: pointer;
             user-select: none;
-            transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); /* Animación con un ligero rebote */
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), inset 0 2px 4px rgba(255,255,255,0.3);
-            z-index: 10;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
         }
 
         .tile:hover {
-            background: linear-gradient(135deg, var(--tile-hover), #2563eb);
-            z-index: 20;
-            box-shadow: 0 15px 20px -3px rgba(0, 0, 0, 0.6), inset 0 2px 4px rgba(255,255,255,0.4);
+            background-color: var(--tile-hover-bg);
+            transform: scale(1.02);
         }
 
-        .controls {
-            margin-top: 25px;
+        .empty-tile {
+            background-color: transparent;
+            cursor: default;
+            box-shadow: none;
+        }
+
+        .tile:hover.empty-tile {
+             background-color: transparent;
+             transform: none;
+        }
+
+        .game-controls {
             display: flex;
             gap: 15px;
             align-items: center;
@@ -121,19 +124,17 @@
         .moves-counter {
             font-size: 1.2rem;
             font-weight: bold;
-            color: var(--accent);
+            color: var(--accent-color);
             background: rgba(15, 23, 42, 0.6);
             padding: 10px 20px;
             border-radius: 10px;
             border: 1px solid var(--border-color);
         }
 
-        button.btn-reset {
+        .btn {
             padding: 12px 25px;
             border: none;
             border-radius: 10px;
-            background-color: #ef4444;
-            color: white;
             font-size: 1rem;
             font-weight: bold;
             cursor: pointer;
@@ -141,15 +142,20 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
 
-        button.btn-reset:hover {
+        .btn-reset {
+            background-color: #ef4444;
+            color: white;
+        }
+
+        .btn-reset:hover {
             background-color: #f87171;
             transform: translateY(-2px);
         }
 
         /* --- SECCIÓN DEL HISTORIAL VISUAL --- */
         .history-section {
-            width: 320px;
-            height: 480px; /* Misma altura aprox que el juego */
+            width: 350px;
+            height: 520px; /* Misma altura aprox que el juego */
             background-color: var(--panel-bg);
             border-radius: 20px;
             border: 1px solid var(--border-color);
@@ -165,7 +171,7 @@
             border-bottom: 1px solid var(--border-color);
             font-weight: bold;
             text-align: center;
-            color: var(--accent);
+            color: var(--accent-color);
             font-size: 1.1rem;
         }
 
@@ -185,13 +191,14 @@
         .history-list::-webkit-scrollbar-thumb:hover { background: #64748b; }
 
         .history-card {
-            background-color: #0f172a;
+            background-color: #0f172a; /* Fondo de tarjeta de historial más oscuro */
             border: 1px solid var(--border-color);
             border-radius: 12px;
             padding: 12px;
             display: flex;
             align-items: center;
             gap: 15px;
+            box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1);
             animation: fadeIn 0.3s ease;
         }
 
@@ -219,19 +226,18 @@
         }
 
         .step-desc span {
-            color: var(--accent);
+            color: var(--accent-color);
             font-weight: bold;
         }
 
-        /* --- MINI TABLERO PARA EL HISTORIAL --- */
+        /* --- MINI TABLERO PARA EL HISTORIAL (MINIATURA) --- */
         .mini-board {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(3, 20px);
+            grid-template-rows: repeat(3, 20px);
             gap: 2px;
-            width: 60px;
-            height: 60px;
-            background-color: #334155;
             padding: 2px;
+            background-color: #334155;
             border-radius: 6px;
         }
 
@@ -246,7 +252,7 @@
             border-radius: 3px;
         }
 
-        .mini-tile.empty {
+        .mini-tile.empty-tile {
             background-color: transparent;
         }
 
@@ -263,183 +269,163 @@
 
     <div class="header">
         <h1>8-Puzzle AI</h1>
-        <div class="subtitle">State Space Search Engine</div>
+        <p class="subtitle">STATE SPACE SEARCH ENGINE</p>
     </div>
     
     <div class="app-container">
         
-        <div class="game-section">
-            <div class="board" id="board">
+        <section class="game-section">
+            <div id="board" class="board">
                 </div>
-            <div class="controls">
-                <div class="moves-counter" id="moves-text">Movimientos: 0</div>
-                <button class="btn-reset" onclick="resetGame()">Reiniciar Estado</button>
+            <div class="game-controls">
+                <span id="moves-counter" class="moves-counter">Movimientos: 0</span>
+                <button id="reset-btn" class="btn btn-reset" onclick="initGame()">Reiniciar Estado</button>
             </div>
-        </div>
+        </section>
 
-        <div class="history-section">
+        <section class="history-section">
             <div class="history-header">
                 Historial de Estados
             </div>
-            <div class="history-list" id="history-list">
+            <div id="history-list" class="history-list">
                 <div class="empty-history-msg">Realiza un movimiento para comenzar a registrar la ruta.</div>
             </div>
-        </div>
+        </section>
 
     </div>
 
     <script>
-        const boardEl = document.getElementById('board');
-        const movesEl = document.getElementById('moves-text');
-        const historyListEl = document.getElementById('history-list');
-        
-        const TILE_SIZE = 100; 
-        const GAP = 10;
-
-        // Estado inicial
+        // Estados correctos basados en image_1.png
+        // 0 representa el espacio vacío
         const initialState = [5, 4, 0, 6, 1, 8, 7, 3, 2];
         const goalState = [1, 2, 3, 8, 0, 4, 7, 6, 5];
-        
-        let currentState = [...initialState];
+        let currentState = [];
         let moves = 0;
-        let moveHistory = []; // Guardará objetos: { step, movedNum, stateArray }
+        let history = []; // Guardará objetos: { step, movedTileNum, stateBefore, stateAfter }
 
+        // Inicializar el juego
         function initGame() {
-            boardEl.innerHTML = ''; 
-            moves = 0;
-            moveHistory = [];
             currentState = [...initialState];
-            updateMovesDisplay();
-            renderHistoryLog();
+            moves = 0;
+            history = [];
+            document.getElementById('moves-counter').innerText = `Movimientos: ${moves}`;
+            document.getElementById('history-list').innerHTML = '<div class="empty-history-msg">Realiza un movimiento para comenzar a registrar la ruta.</div>';
+            renderBoard();
+        }
 
-            currentState.forEach((num) => {
-                if (num !== 0) {
-                    const tile = document.createElement('div');
-                    tile.classList.add('tile');
-                    tile.id = `tile-${num}`;
-                    tile.innerText = num;
-                    tile.onclick = () => handleTileClick(num);
-                    boardEl.appendChild(tile);
+        // Renderizar el tablero principal perfectamente alineado
+        function renderBoard() {
+            const board = document.getElementById('board');
+            board.innerHTML = ''; // Limpiar tablero
+            
+            currentState.forEach((tile, index) => {
+                const tileDiv = document.createElement('div');
+                tileDiv.className = `tile ${tile === 0 ? 'empty-tile' : ''}`;
+                tileDiv.innerText = tile === 0 ? '' : tile;
+                if (tile !== 0) {
+                    tileDiv.addEventListener('click', () => moveTile(index));
                 }
+                board.appendChild(tileDiv);
             });
-
-            // Dar un pequeño tiempo para que el DOM se dibuje antes de posicionar (para la animación inicial si se desea)
-            setTimeout(renderPositions, 50);
+            checkWin();
         }
 
-        function getCoordinates(index) {
-            const row = Math.floor(index / 3);
-            const col = index % 3;
-            // Calcular posición absoluta sumando el tamaño de las fichas y los gaps correspondientes
-            const x = col * (TILE_SIZE + GAP) + GAP; 
-            const y = row * (TILE_SIZE + GAP) + GAP;
-            return { x, y };
-        }
-
-        function renderPositions() {
-            currentState.forEach((num, index) => {
-                if (num !== 0) {
-                    const tileEl = document.getElementById(`tile-${num}`);
-                    const { x, y } = getCoordinates(index);
-                    tileEl.style.transform = `translate(${x}px, ${y}px)`;
-                }
-            });
-        }
-
-        function handleTileClick(num) {
-            const tileIndex = currentState.indexOf(num);
+        // Lógica de movimiento
+        function moveTile(tileIndex) {
             const emptyIndex = currentState.indexOf(0);
-
-            if (isAdjacent(tileIndex, emptyIndex)) {
-                // Intercambiar en el array
+            const validMoves = getValidMoves(emptyIndex);
+            
+            if (validMoves.includes(tileIndex)) {
+                const movedTileNum = currentState[tileIndex];
+                const stateBefore = [...currentState];
+                
+                // Intercambiar fichas
                 [currentState[tileIndex], currentState[emptyIndex]] = [currentState[emptyIndex], currentState[tileIndex]];
                 
                 moves++;
+                document.getElementById('moves-counter').innerText = `Movimientos: ${moves}`;
                 
-                // Guardar la foto del estado ACTUAL en el historial
-                moveHistory.push({
-                    step: moves,
-                    movedNum: num,
-                    stateArray: [...currentState]
-                });
-
-                updateMovesDisplay();
-                renderPositions(); 
-                renderHistoryLog(); 
-
-                setTimeout(checkWin, 300);
+                // Actualizar historial visual
+                updateHistory(movedTileNum, stateBefore, currentState);
+                renderBoard();
             }
         }
 
-        function isAdjacent(index1, index2) {
-            const row1 = Math.floor(index1 / 3);
-            const col1 = index1 % 3;
-            const row2 = Math.floor(index2 / 3);
-            const col2 = index2 % 3;
-            return (Math.abs(row1 - row2) + Math.abs(col1 - col2)) === 1;
-        }
-
-        function updateMovesDisplay() {
-            movesEl.innerText = `Movimientos: ${moves}`;
-        }
-
-        function resetGame() {
-            initGame();
-        }
-
-        // --- FUNCIONES DEL HISTORIAL VISUAL ---
-        function renderHistoryLog() {
-            if (moveHistory.length === 0) {
-                historyListEl.innerHTML = '<div class="empty-history-msg">Realiza un movimiento para comenzar a registrar la ruta.</div>';
-                return;
-            }
+        // Devolver índices de fichas adyacentes al vacío
+        function getValidMoves(emptyIndex) {
+            const moves = [];
+            const row = Math.floor(emptyIndex / 3);
+            const col = emptyIndex % 3;
             
-            historyListEl.innerHTML = ''; // Limpiar lista
-
-            moveHistory.forEach(record => {
-                const card = document.createElement('div');
-                card.className = 'history-card';
-                
-                // Crear información de texto
-                const infoDiv = document.createElement('div');
-                infoDiv.className = 'history-info';
-                infoDiv.innerHTML = `
-                    <div class="step-num">Paso ${record.step}</div>
-                    <div class="step-desc">Movió ficha <span>${record.movedNum}</span></div>
-                `;
-
-                // Crear mini tablero gráfico
-                const miniBoardDiv = document.createElement('div');
-                miniBoardDiv.className = 'mini-board';
-                
-                record.stateArray.forEach(val => {
-                    const miniTile = document.createElement('div');
-                    if(val === 0) {
-                        miniTile.className = 'mini-tile empty';
-                    } else {
-                        miniTile.className = 'mini-tile';
-                        miniTile.innerText = val;
-                    }
-                    miniBoardDiv.appendChild(miniTile);
-                });
-
-                card.appendChild(infoDiv);
-                card.appendChild(miniBoardDiv);
-                historyListEl.appendChild(card);
-            });
-
-            // Auto-scroll al final
-            historyListEl.scrollTop = historyListEl.scrollHeight;
+            if (row > 0) moves.push(emptyIndex - 3); // Arriba
+            if (row < 2) moves.push(emptyIndex + 3); // Abajo
+            if (col > 0) moves.push(emptyIndex - 1); // Izquierda
+            if (col < 2) moves.push(emptyIndex + 1); // Derecha
+            
+            return moves;
         }
 
+        // Actualizar el panel de historial visual con miniaturas perfectas
+        function updateHistory(movedNum, stateBefore, stateAfter) {
+            const historyList = document.getElementById('history-list');
+            
+            // Eliminar mensaje de historial vacío en el primer movimiento
+            if (moves === 1) {
+                historyList.innerHTML = '';
+            }
+
+            const card = document.createElement('div');
+            card.className = 'history-card';
+            
+            // Información de texto
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'history-info';
+            infoDiv.innerHTML = `
+                <div class="step-num">Paso ${moves}</div>
+                <div class="step-desc">Movió ficha <span>${movedNum}</span></div>
+            `;
+            card.appendChild(infoDiv);
+
+            // Mini tablero gráfico perfectly aligned
+            const miniBoardDiv = renderMiniBoard(stateAfter);
+            card.appendChild(miniBoardDiv);
+
+            // Añadir tarjeta al historial
+            historyList.appendChild(card);
+            
+            // Auto-scroll hasta el final del historial
+            historyList.scrollTop = historyList.scrollHeight;
+        }
+
+        // Renderizar una miniatura de tablero para el historial perfectamente alineada
+        function renderMiniBoard(state) {
+            const miniBoard = document.createElement('div');
+            miniBoard.className = 'mini-board';
+            
+            state.forEach(val => {
+                const miniTile = document.createElement('div');
+                if(val === 0) {
+                    miniTile.className = 'mini-tile empty-tile';
+                } else {
+                    miniTile.className = 'mini-tile';
+                    miniTile.innerText = val;
+                }
+                miniBoard.appendChild(miniTile);
+            });
+            return miniBoard;
+        }
+
+        // Comprobar si se ha alcanzado el estado objetivo
         function checkWin() {
             const isWin = currentState.every((val, index) => val === goalState[index]);
             if (isWin) {
-                alert(`¡Misión cumplida! Has resuelto el puzzle en ${moves} movimientos.`);
+                setTimeout(() => {
+                    alert(`¡Excelente! Has resuelto el puzzle de 8 piezas en ${moves} movimientos.`);
+                }, 100);
             }
         }
 
-        // Arrancar juego
+        // Arrancar juego al cargar la página
         initGame();
     </script>
 </body>

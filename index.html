@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>8-Puzzle IA - Animaciones Fluidas</title>
+    <title>8-Puzzle IA - Animaciones e Historial</title>
     <style>
         :root {
             --bg-color: #0f172a;
             --board-bg: #1e293b;
-            --tile-bg: #3b82f6; /* Azul más vibrante */
+            --tile-bg: #3b82f6;
             --tile-hover: #2563eb;
             --text-color: #f8fafc;
             --tile-size: 100px;
@@ -49,10 +49,8 @@
                         inset 0 1px 0 rgba(255,255,255,0.1);
         }
 
-        /* El contenedor principal debe tener tamaño fijo para el posicionamiento absoluto */
         .board {
             position: relative;
-            /* 3 fichas + 2 espacios entre ellas */
             width: calc((var(--tile-size) * 3) + (var(--gap) * 2));
             height: calc((var(--tile-size) * 3) + (var(--gap) * 2));
         }
@@ -71,7 +69,6 @@
             border-radius: 12px;
             cursor: pointer;
             user-select: none;
-            /* Aquí está la magia de la fluidez: */
             transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
             box-shadow: 0 6px 12px rgba(0,0,0,0.3), 
                         inset 0 2px 0 rgba(255,255,255,0.2);
@@ -88,12 +85,14 @@
         .controls {
             margin-top: 30px;
             display: flex;
-            gap: 15px;
+            gap: 10px;
             align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
         }
 
         button {
-            padding: 12px 24px;
+            padding: 12px 20px;
             border: none;
             border-radius: 8px;
             background-color: #38bdf8;
@@ -114,15 +113,74 @@
             transform: translateY(0);
         }
 
+        /* Botón específico para el historial */
+        .btn-history {
+            background-color: #475569;
+            color: white;
+        }
+
+        .btn-history:hover {
+            background-color: #64748b;
+        }
+
         .moves-counter {
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             font-weight: 600;
             color: #cbd5e1;
             background: rgba(0,0,0,0.2);
-            padding: 10px 20px;
+            padding: 10px 15px;
             border-radius: 8px;
         }
 
+        /* Panel de historial */
+        .history-panel {
+            margin-top: 15px;
+            width: 100%;
+            max-width: 350px;
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 15px;
+            box-sizing: border-box;
+            max-height: 150px;
+            overflow-y: auto;
+            display: none; /* Oculto por defecto */
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+        }
+
+        .history-panel.show {
+            display: block;
+        }
+
+        .history-item {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-bottom: 6px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #1e293b;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .history-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+            color: #38bdf8; /* Destacar el último movimiento */
+            font-weight: bold;
+        }
+
+        /* Estilizar el scrollbar del panel */
+        .history-panel::-webkit-scrollbar {
+            width: 8px;
+        }
+        .history-panel::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        .history-panel::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
@@ -137,52 +195,49 @@
 
     <div class="controls">
         <div class="moves-counter" id="moves-text">Movimientos: 0</div>
+        <button class="btn-history" onclick="toggleHistory()">Historial de Movimientos</button>
         <button onclick="resetGame()">Reiniciar Estado</button>
     </div>
+
+    <div id="history-panel" class="history-panel"></div>
 
     <script>
         const boardEl = document.getElementById('board');
         const movesEl = document.getElementById('moves-text');
+        const historyPanel = document.getElementById('history-panel');
         
-        // Variables de diseño para calcular las posiciones en JS
         const TILE_SIZE = 100; 
         const GAP = 12;
 
-        // Estado inicial exacto que pediste
         const initialState = [5, 4, 0, 6, 1, 8, 7, 3, 2];
-        // El Goal State según la imagen
         const goalState = [1, 2, 3, 8, 0, 4, 7, 6, 5];
         
         let currentState = [...initialState];
         let moves = 0;
+        let moveHistory = []; // Aquí guardaremos el registro
 
-        // Inicialización de la UI
         function initGame() {
-            boardEl.innerHTML = ''; // Limpiamos si hay algo
+            boardEl.innerHTML = ''; 
             moves = 0;
+            moveHistory = [];
             currentState = [...initialState];
             updateMovesDisplay();
+            renderHistoryLog();
 
-            // Crear los elementos DOM solo una vez para los números del 1 al 8
             currentState.forEach((num) => {
                 if (num !== 0) {
                     const tile = document.createElement('div');
                     tile.classList.add('tile');
                     tile.id = `tile-${num}`;
                     tile.innerText = num;
-                    
-                    // Evento click
                     tile.onclick = () => handleTileClick(num);
-                    
                     boardEl.appendChild(tile);
                 }
             });
 
-            // Aplicar posiciones iniciales
             renderPositions();
         }
 
-        // Calcula las coordenadas X e Y basado en el índice del array (0-8)
         function getCoordinates(index) {
             const row = Math.floor(index / 3);
             const col = index % 3;
@@ -191,7 +246,6 @@
             return { x, y };
         }
 
-        // Actualiza el CSS transform de cada ficha para animarla a su nueva posición
         function renderPositions() {
             currentState.forEach((num, index) => {
                 if (num !== 0) {
@@ -202,32 +256,30 @@
             });
         }
 
-        // Lógica de movimiento
         function handleTileClick(num) {
             const tileIndex = currentState.indexOf(num);
             const emptyIndex = currentState.indexOf(0);
 
             if (isAdjacent(tileIndex, emptyIndex)) {
-                // Intercambiar en el array lógico
+                // Registrar el movimiento antes de hacerlo
+                moves++;
+                moveHistory.push(`Paso ${moves}: Ficha [ ${num} ] movida`);
+
                 [currentState[tileIndex], currentState[emptyIndex]] = [currentState[emptyIndex], currentState[tileIndex]];
                 
-                moves++;
                 updateMovesDisplay();
-                renderPositions(); // Dispara la animación CSS
+                renderPositions(); 
+                renderHistoryLog(); // Actualizar la vista del panel
 
-                // Pequeño delay para verificar victoria después de que termine la animación
                 setTimeout(checkWin, 300);
             }
         }
 
-        // Verifica si dos índices en una cuadrícula 3x3 son adyacentes (arriba, abajo, izq, der)
         function isAdjacent(index1, index2) {
             const row1 = Math.floor(index1 / 3);
             const col1 = index1 % 3;
             const row2 = Math.floor(index2 / 3);
             const col2 = index2 % 3;
-
-            // Son adyacentes si la diferencia absoluta en filas + columnas es exactamente 1
             return (Math.abs(row1 - row2) + Math.abs(col1 - col2)) === 1;
         }
 
@@ -239,6 +291,25 @@
             initGame();
         }
 
+        // Funciones del Historial
+        function toggleHistory() {
+            historyPanel.classList.toggle('show');
+            renderHistoryLog();
+        }
+
+        function renderHistoryLog() {
+            if (moveHistory.length === 0) {
+                historyPanel.innerHTML = '<div class="history-item">Aún no hay movimientos registrados.</div>';
+                return;
+            }
+            
+            // Llenar el panel con el array de movimientos
+            historyPanel.innerHTML = moveHistory.map(mov => `<div class="history-item"><span>${mov}</span></div>`).join('');
+            
+            // Hacer scroll automático hacia abajo para ver el último movimiento
+            historyPanel.scrollTop = historyPanel.scrollHeight;
+        }
+
         function checkWin() {
             const isWin = currentState.every((val, index) => val === goalState[index]);
             if (isWin) {
@@ -246,7 +317,7 @@
             }
         }
 
-        // Arrancar
+        // Arrancar juego
         initGame();
     </script>
 </body>

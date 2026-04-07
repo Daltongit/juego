@@ -1,432 +1,579 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>8-Puzzle AI - Visual History & Alignment Fix</title>
-    <style>
-        :root {
-            --bg-color: #0b1120; /* Color de fondo oscuro */
-            --panel-bg: #1e293b; /* Color de fondo de los paneles */
-            --tile-bg: #3b82f6; /* Color de ficha azul brillante */
-            --text-color: #f8fafc; /* Color de texto claro */
-            --accent-color: #38bdf8; /* Color de acento azul cielo */
-            --tile-hover-bg: #60a5fa; /* Color de ficha al pasar el ratón */
-            --border-color: #334155; /* Color de borde de panel */
-        }
+    <title>Battle Arena Online - Juego Multijugador</title>
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            overflow-x: hidden;
-        }
+    <!-- Fuentes -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
 
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/auth.css">
+    <link rel="stylesheet" href="css/menu.css">
+    <link rel="stylesheet" href="css/game.css">
+    <link rel="stylesheet" href="css/leaderboard.css">
+    <link rel="stylesheet" href="css/responsive.css">
 
-        h1 {
-            color: var(--accent-color);
-            margin: 0 0 5px 0;
-            font-size: 2.5rem;
-            letter-spacing: 1px;
-            text-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
-        }
+    <!-- Librerías Externas -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <script src="lib/phaser.min.js"></script>
+    <script src="lib/gsap.min.js"></script>
 
-        .subtitle {
-            color: #94a3b8;
-            font-size: 0.9rem;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-        }
-
-        .app-container {
-            display: flex;
-            gap: 40px;
-            max-width: 1000px;
-            align-items: flex-start;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-
-        /* --- SECCIÓN DEL JUEGO (PANEL DE JUEGO) --- */
-        .game-section {
-            background-color: var(--panel-bg);
-            padding: 25px;
-            border-radius: 20px;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .board {
-            display: grid;
-            grid-template-columns: repeat(3, 100px);
-            grid-template-rows: repeat(3, 100px);
-            gap: 10px;
-            padding: 10px;
-            background-color: #0f172a; /* Fondo del tablero más oscuro para contraste */
-            border-radius: 12px;
-            margin-bottom: 25px;
-            justify-content: center; /* Centrar el tablero */
-            position: relative;
-        }
-
-        .tile {
-            background-color: var(--tile-bg);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 3rem;
-            font-weight: bold;
-            border-radius: 12px;
-            cursor: pointer;
-            user-select: none;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-        }
-
-        .tile:hover {
-            background-color: var(--tile-hover-bg);
-            transform: scale(1.02);
-        }
-
-        .empty-tile {
-            background-color: transparent;
-            cursor: default;
-            box-shadow: none;
-        }
-
-        .tile:hover.empty-tile {
-             background-color: transparent;
-             transform: none;
-        }
-
-        .game-controls {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-            width: 100%;
-            justify-content: space-between;
-        }
-
-        .moves-counter {
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: var(--accent-color);
-            background: rgba(15, 23, 42, 0.6);
-            padding: 10px 20px;
-            border-radius: 10px;
-            border: 1px solid var(--border-color);
-        }
-
-        .btn {
-            padding: 12px 25px;
-            border: none;
-            border-radius: 10px;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.2s;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        }
-
-        .btn-reset {
-            background-color: #ef4444;
-            color: white;
-        }
-
-        .btn-reset:hover {
-            background-color: #f87171;
-            transform: translateY(-2px);
-        }
-
-        /* --- SECCIÓN DEL HISTORIAL VISUAL --- */
-        .history-section {
-            width: 350px;
-            height: 520px; /* Misma altura aprox que el juego */
-            background-color: var(--panel-bg);
-            border-radius: 20px;
-            border: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-        }
-
-        .history-header {
-            padding: 20px;
-            background-color: rgba(15, 23, 42, 0.8);
-            border-bottom: 1px solid var(--border-color);
-            font-weight: bold;
-            text-align: center;
-            color: var(--accent-color);
-            font-size: 1.1rem;
-        }
-
-        .history-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        /* Scrollbar styling */
-        .history-list::-webkit-scrollbar { width: 8px; }
-        .history-list::-webkit-scrollbar-track { background: transparent; }
-        .history-list::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
-        .history-list::-webkit-scrollbar-thumb:hover { background: #64748b; }
-
-        .history-card {
-            background-color: #0f172a; /* Fondo de tarjeta de historial más oscuro */
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 12px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1);
-            animation: fadeIn 0.3s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateX(-10px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-
-        .history-info {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        .step-num {
-            font-size: 0.85rem;
-            color: #94a3b8;
-            font-weight: bold;
-        }
-
-        .step-desc {
-            font-size: 0.95rem;
-            color: white;
-        }
-
-        .step-desc span {
-            color: var(--accent-color);
-            font-weight: bold;
-        }
-
-        /* --- MINI TABLERO PARA EL HISTORIAL (MINIATURA) --- */
-        .mini-board {
-            display: grid;
-            grid-template-columns: repeat(3, 20px);
-            grid-template-rows: repeat(3, 20px);
-            gap: 2px;
-            padding: 2px;
-            background-color: #334155;
-            border-radius: 6px;
-        }
-
-        .mini-tile {
-            background-color: var(--tile-bg);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.8rem;
-            font-weight: bold;
-            border-radius: 3px;
-        }
-
-        .mini-tile.empty-tile {
-            background-color: transparent;
-        }
-
-        .empty-history-msg {
-            text-align: center;
-            color: #64748b;
-            margin-top: 50px;
-            font-style: italic;
-        }
-
-    </style>
+    <!-- Iconos -->
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23000'/%3E%3Cpath d='M50 10 L70 30 L70 50 L50 70 L30 50 L30 30 Z' fill='%23ff0000'/%3E%3C/svg%3E">
 </head>
+
 <body>
+    <!-- Fondo animado con partículas -->
+    <div id="particles-bg"></div>
 
-    <div class="header">
-        <h1>8-Puzzle AI</h1>
-        <p class="subtitle">STATE SPACE SEARCH ENGINE</p>
-    </div>
-    
-    <div class="app-container">
-        
-        <section class="game-section">
-            <div id="board" class="board">
+    <!-- Contenedor de autenticación (esquina superior izquierda) -->
+    <div id="auth-container" class="auth-container">
+        <!-- Formulario de Login -->
+        <div id="login-form" class="auth-form">
+            <h2>Iniciar Sesión</h2>
+            <div class="input-group">
+                <input type="email" id="login-email" placeholder="Correo electrónico" required>
+            </div>
+            <div class="input-group">
+                <input type="password" id="login-password" placeholder="Contraseña" required>
+            </div>
+            <button id="login-btn" class="auth-btn">Entrar</button>
+            <p class="auth-switch">¿No tienes cuenta? <a href="#" id="show-register">Regístrate</a></p>
+            <div id="login-error" class="auth-error"></div>
+        </div>
+
+        <!-- Formulario de Registro -->
+        <div id="register-form" class="auth-form" style="display: none;">
+            <h2>Crear Cuenta</h2>
+            <div class="input-group">
+                <input type="text" id="register-username" placeholder="Nombre de usuario" required>
+            </div>
+            <div class="input-group">
+                <input type="email" id="register-email" placeholder="Correo electrónico" required>
+            </div>
+            <div class="input-group">
+                <input type="password" id="register-password" placeholder="Contraseña" required>
+            </div>
+            <div class="input-group">
+                <input type="password" id="register-confirm-password" placeholder="Confirmar contraseña" required>
+            </div>
+            <button id="register-btn" class="auth-btn">Registrarse</button>
+            <p class="auth-switch">¿Ya tienes cuenta? <a href="#" id="show-login">Inicia sesión</a></p>
+            <div id="register-error" class="auth-error"></div>
+        </div>
+
+        <!-- Perfil de usuario (después de iniciar sesión) -->
+        <div id="user-profile" class="user-profile" style="display: none;">
+            <div class="user-avatar">
+                <canvas id="avatar-canvas" width="60" height="60"></canvas>
+            </div>
+            <div class="user-info">
+                <div class="username" id="display-username">Jugador</div>
+                <div class="user-level">Nivel <span id="user-level">1</span></div>
+                <div class="user-xp">
+                    <div class="xp-bar">
+                        <div id="user-xp-bar" class="xp-fill" style="width: 0%"></div>
+                    </div>
+                    <span id="user-xp-text">0/100 XP</span>
                 </div>
-            <div class="game-controls">
-                <span id="moves-counter" class="moves-counter">Movimientos: 0</span>
-                <button id="reset-btn" class="btn btn-reset" onclick="initGame()">Reiniciar Estado</button>
             </div>
-        </section>
-
-        <section class="history-section">
-            <div class="history-header">
-                Historial de Estados
-            </div>
-            <div id="history-list" class="history-list">
-                <div class="empty-history-msg">Realiza un movimiento para comenzar a registrar la ruta.</div>
-            </div>
-        </section>
-
+            <button id="logout-btn" class="logout-btn">Salir</button>
+        </div>
     </div>
 
-    <script>
-        // Estados correctos basados en image_1.png
-        // 0 representa el espacio vacío
-        const initialState = [5, 4, 0, 6, 1, 8, 7, 3, 2];
-        const goalState = [1, 2, 3, 8, 0, 4, 7, 6, 5];
-        let currentState = [];
-        let moves = 0;
-        let history = []; // Guardará objetos: { step, movedTileNum, stateBefore, stateAfter }
+    <!-- Menú Principal (visible después de autenticarse) -->
+    <div id="main-menu" class="main-menu" style="display: none;">
+        <div class="menu-container">
+            <h1 class="game-title">BATTLE ARENA</h1>
+            <div class="subtitle">ONLINE</div>
 
-        // Inicializar el juego
-        function initGame() {
-            currentState = [...initialState];
-            moves = 0;
-            history = [];
-            document.getElementById('moves-counter').innerText = `Movimientos: ${moves}`;
-            document.getElementById('history-list').innerHTML = '<div class="empty-history-msg">Realiza un movimiento para comenzar a registrar la ruta.</div>';
-            renderBoard();
-        }
+            <div class="menu-buttons">
+                <button id="play-btn" class="menu-btn primary-btn">JUGAR</button>
+                <button id="leaderboard-btn" class="menu-btn">CLASIFICACIÓN</button>
+                <button id="profile-btn" class="menu-btn">PERFIL</button>
+                <button id="settings-btn" class="menu-btn">AJUSTES</button>
+            </div>
 
-        // Renderizar el tablero principal perfectamente alineado
-        function renderBoard() {
-            const board = document.getElementById('board');
-            board.innerHTML = ''; // Limpiar tablero
-            
-            currentState.forEach((tile, index) => {
-                const tileDiv = document.createElement('div');
-                tileDiv.className = `tile ${tile === 0 ? 'empty-tile' : ''}`;
-                tileDiv.innerText = tile === 0 ? '' : tile;
-                if (tile !== 0) {
-                    tileDiv.addEventListener('click', () => moveTile(index));
-                }
-                board.appendChild(tileDiv);
-            });
-            checkWin();
-        }
+            <div class="menu-footer">
+                <div class="online-players">
+                    <span class="online-indicator"></span>
+                    <span id="online-count">0</span> jugadores en línea
+                </div>
+            </div>
+        </div>
+    </div>
 
-        // Lógica de movimiento
-        function moveTile(tileIndex) {
-            const emptyIndex = currentState.indexOf(0);
-            const validMoves = getValidMoves(emptyIndex);
-            
-            if (validMoves.includes(tileIndex)) {
-                const movedTileNum = currentState[tileIndex];
-                const stateBefore = [...currentState];
-                
-                // Intercambiar fichas
-                [currentState[tileIndex], currentState[emptyIndex]] = [currentState[emptyIndex], currentState[tileIndex]];
-                
-                moves++;
-                document.getElementById('moves-counter').innerText = `Movimientos: ${moves}`;
-                
-                // Actualizar historial visual
-                updateHistory(movedTileNum, stateBefore, currentState);
-                renderBoard();
-            }
-        }
+    <!-- Menú de Juego -->
+    <div id="game-menu" class="game-menu" style="display: none;">
+        <div class="menu-container">
+            <h2>MODOS DE JUEGO</h2>
 
-        // Devolver índices de fichas adyacentes al vacío
-        function getValidMoves(emptyIndex) {
-            const moves = [];
-            const row = Math.floor(emptyIndex / 3);
-            const col = emptyIndex % 3;
-            
-            if (row > 0) moves.push(emptyIndex - 3); // Arriba
-            if (row < 2) moves.push(emptyIndex + 3); // Abajo
-            if (col > 0) moves.push(emptyIndex - 1); // Izquierda
-            if (col < 2) moves.push(emptyIndex + 1); // Derecha
-            
-            return moves;
-        }
+            <div class="game-modes">
+                <div class="game-mode-card" data-mode="ffa">
+                    <div class="mode-icon">
+                        <canvas id="ffa-icon" width="80" height="80"></canvas>
+                    </div>
+                    <h3>Todos contra Todos</h3>
+                    <p>Combate contra todos los jugadores en una arena sin reglas. ¡El último en pie gana!</p>
+                    <div class="mode-stats">
+                        <span class="players">2-8 jugadores</span>
+                        <span class="duration">5 min</span>
+                    </div>
+                    <button class="select-mode-btn" data-mode="ffa">SELECCIONAR</button>
+                </div>
 
-        // Actualizar el panel de historial visual con miniaturas perfectas
-        function updateHistory(movedNum, stateBefore, stateAfter) {
-            const historyList = document.getElementById('history-list');
-            
-            // Eliminar mensaje de historial vacío en el primer movimiento
-            if (moves === 1) {
-                historyList.innerHTML = '';
-            }
+                <div class="game-mode-card" data-mode="team">
+                    <div class="mode-icon">
+                        <canvas id="team-icon" width="80" height="80"></canvas>
+                    </div>
+                    <h3>Combate en Equipo</h3>
+                    <p>Forma un equipo con otros jugadores y derrota al equipo contrario. ¡La cooperación es clave!</p>
+                    <div class="mode-stats">
+                        <span class="players">4-8 jugadores</span>
+                        <span class="duration">5 min</span>
+                    </div>
+                    <button class="select-mode-btn" data-mode="team">SELECCIONAR</button>
+                </div>
 
-            const card = document.createElement('div');
-            card.className = 'history-card';
-            
-            // Información de texto
-            const infoDiv = document.createElement('div');
-            infoDiv.className = 'history-info';
-            infoDiv.innerHTML = `
-                <div class="step-num">Paso ${moves}</div>
-                <div class="step-desc">Movió ficha <span>${movedNum}</span></div>
-            `;
-            card.appendChild(infoDiv);
+                <div class="game-mode-card" data-mode="survival">
+                    <div class="mode-icon">
+                        <canvas id="survival-icon" width="80" height="80"></canvas>
+                    </div>
+                    <h3>Supervivencia</h3>
+                    <p>Enfrenta olas de enemigos cada vez más difíciles. ¿Cuánto tiempo puedes sobrevivir?</p>
+                    <div class="mode-stats">
+                        <span class="players">1-4 jugadores</span>
+                        <span class="duration">Ilimitado</span>
+                    </div>
+                    <button class="select-mode-btn" data-mode="survival">SELECCIONAR</button>
+                </div>
+            </div>
 
-            // Mini tablero gráfico perfectly aligned
-            const miniBoardDiv = renderMiniBoard(stateAfter);
-            card.appendChild(miniBoardDiv);
+            <button id="back-to-main-btn" class="back-btn">VOLVER</button>
+        </div>
+    </div>
 
-            // Añadir tarjeta al historial
-            historyList.appendChild(card);
-            
-            // Auto-scroll hasta el final del historial
-            historyList.scrollTop = historyList.scrollHeight;
-        }
+    <!-- Sala de Espera -->
+    <div id="lobby" class="lobby" style="display: none;">
+        <div class="lobby-container">
+            <div class="lobby-header">
+                <h2>SALA DE ESPERA</h2>
+                <div class="game-code">
+                    CÓDIGO: <span id="lobby-code">ABC123</span>
+                    <button id="copy-code-btn" class="copy-btn">COPIAR</button>
+                </div>
+            </div>
 
-        // Renderizar una miniatura de tablero para el historial perfectamente alineada
-        function renderMiniBoard(state) {
-            const miniBoard = document.createElement('div');
-            miniBoard.className = 'mini-board';
-            
-            state.forEach(val => {
-                const miniTile = document.createElement('div');
-                if(val === 0) {
-                    miniTile.className = 'mini-tile empty-tile';
-                } else {
-                    miniTile.className = 'mini-tile';
-                    miniTile.innerText = val;
-                }
-                miniBoard.appendChild(miniTile);
-            });
-            return miniBoard;
-        }
+            <div class="lobby-content">
+                <div class="lobby-players">
+                    <h3>JUGADORES (<span id="player-count">1</span>/8)</h3>
+                    <div id="players-list" class="players-list">
+                        <!-- Los jugadores se agregarán dinámicamente -->
+                    </div>
+                </div>
 
-        // Comprobar si se ha alcanzado el estado objetivo
-        function checkWin() {
-            const isWin = currentState.every((val, index) => val === goalState[index]);
-            if (isWin) {
-                setTimeout(() => {
-                    alert(`¡Excelente! Has resuelto el puzzle de 8 piezas en ${moves} movimientos.`);
-                }, 100);
-            }
-        }
+                <div class="lobby-settings">
+                    <h3>CONFIGURACIÓN</h3>
+                    <div class="setting-item">
+                        <label>Modo de juego:</label>
+                        <span id="game-mode-display">Todos contra Todos</span>
+                    </div>
+                    <div class="setting-item">
+                        <label>Mapa:</label>
+                        <select id="map-select">
+                            <option value="arena">Arena Espacial</option>
+                            <option value="nebula">Nebulosa</option>
+                            <option value="asteroids">Campo de Asteroides</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label>Dificultad:</label>
+                        <select id="difficulty-select">
+                            <option value="normal">Normal</option>
+                            <option value="hard">Difícil</option>
+                            <option value="extreme">Extremo</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
 
-        // Arrancar juego al cargar la página
-        initGame();
-    </script>
+            <div class="lobby-footer">
+                <button id="ready-btn" class="lobby-btn ready-btn">LISTO</button>
+                <button id="leave-lobby-btn" class="lobby-btn leave-btn">SALIR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Área de Juego -->
+    <div id="game-container" class="game-container" style="display: none;">
+        <div id="game-canvas-container"></div>
+
+        <!-- HUD del Juego -->
+        <div id="game-hud" class="game-hud">
+            <div class="hud-top">
+                <div class="health-bar-container">
+                    <div class="health-bar">
+                        <div id="health-fill" class="health-fill" style="width: 100%"></div>
+                    </div>
+                    <span id="health-text">100/100</span>
+                </div>
+
+                <div class="score-container">
+                    <div class="score-label">PUNTUACIÓN</div>
+                    <div id="score-display" class="score-display">0</div>
+                </div>
+
+                <div class="timer-container">
+                    <div id="game-timer" class="game-timer">5:00</div>
+                </div>
+            </div>
+
+            <div class="hud-bottom">
+                <div class="powerups-container">
+                    <div class="powerup-slot" id="powerup-slot-1"></div>
+                    <div class="powerup-slot" id="powerup-slot-2"></div>
+                    <div class="powerup-slot" id="powerup-slot-3"></div>
+                </div>
+
+                <div class="kills-deaths">
+                    <div class="kills">
+                        <span class="icon">⚔</span>
+                        <span id="kills-count">0</span>
+                    </div>
+                    <div class="deaths">
+                        <span class="icon">💀</span>
+                        <span id="deaths-count">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat del Juego -->
+        <div id="game-chat" class="game-chat">
+            <div class="chat-header">
+                <span>CHAT</span>
+                <button id="toggle-chat-btn" class="toggle-chat-btn">▼</button>
+            </div>
+            <div id="chat-messages" class="chat-messages">
+                <!-- Los mensajes se agregarán dinámicamente -->
+            </div>
+            <div class="chat-input-container">
+                <input type="text" id="chat-input" placeholder="Escribe un mensaje..." maxlength="100">
+                <button id="send-chat-btn" class="send-chat-btn">ENVIAR</button>
+            </div>
+        </div>
+
+        <!-- Minimapa -->
+        <div id="minimap" class="minimap">
+            <canvas id="minimap-canvas" width="150" height="150"></canvas>
+        </div>
+
+        <!-- Menú de Pausa -->
+        <div id="pause-menu" class="pause-menu" style="display: none;">
+            <div class="pause-container">
+                <h2>PAUSA</h2>
+                <div class="pause-buttons">
+                    <button id="resume-btn" class="pause-btn">REANUDAR</button>
+                    <button id="settings-game-btn" class="pause-btn">AJUSTES</button>
+                    <button id="quit-game-btn" class="pause-btn">ABANDONAR PARTIDA</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de Clasificación -->
+    <div id="leaderboard" class="leaderboard" style="display: none;">
+        <div class="leaderboard-container">
+            <h2>CLASIFICACIÓN</h2>
+
+            <div class="leaderboard-tabs">
+                <button class="tab-btn active" data-tab="global">GLOBAL</button>
+                <button class="tab-btn" data-tab="weekly">SEMANAL</button>
+                <button class="tab-btn" data-tab="friends">AMIGOS</button>
+            </div>
+
+            <div class="leaderboard-filters">
+                <select id="leaderboard-mode">
+                    <option value="all">Todos los modos</option>
+                    <option value="ffa">Todos contra Todos</option>
+                    <option value="team">Combate en Equipo</option>
+                    <option value="survival">Supervivencia</option>
+                </select>
+            </div>
+
+            <div class="leaderboard-table">
+                <div class="table-header">
+                    <div class="rank-header">POS</div>
+                    <div class="player-header">JUGADOR</div>
+                    <div class="score-header">PUNTUACIÓN</div>
+                    <div class="kd-header">K/D</div>
+                    <div class="wins-header">VICTORIAS</div>
+                </div>
+                <div id="leaderboard-rows" class="table-rows">
+                    <!-- Las filas se agregarán dinámicamente -->
+                </div>
+            </div>
+
+            <button id="back-to-menu-btn" class="back-btn">VOLVER</button>
+        </div>
+    </div>
+
+    <!-- Perfil de Usuario -->
+    <div id="profile" class="profile" style="display: none;">
+        <div class="profile-container">
+            <div class="profile-header">
+                <div class="profile-avatar">
+                    <canvas id="profile-avatar-canvas" width="120" height="120"></canvas>
+                </div>
+                <div class="profile-info">
+                    <h2 id="profile-username">Jugador</h2>
+                    <div class="profile-level">Nivel <span id="profile-level">1</span></div>
+                    <div class="profile-xp">
+                        <div class="xp-bar">
+                            <div id="profile-xp-bar" class="xp-fill" style="width: 0%"></div>
+                        </div>
+                        <span id="profile-xp-text">0/100 XP</span>
+                    </div>
+                </div>
+                <button id="edit-profile-btn" class="edit-profile-btn">EDITAR</button>
+            </div>
+
+            <div class="profile-stats">
+                <h3>ESTADÍSTICAS</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="total-wins">0</div>
+                        <div class="stat-label">Victorias</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="total-losses">0</div>
+                        <div class="stat-label">Derrotas</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="total-kills">0</div>
+                        <div class="stat-label">Eliminaciones</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="total-deaths">0</div>
+                        <div class="stat-label">Muertes</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="win-rate">0%</div>
+                        <div class="stat-label">Tasa de Victoria</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="kd-ratio">0.0</div>
+                        <div class="stat-label">Ratio K/D</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="profile-achievements">
+                <h3>LOGROS</h3>
+                <div id="achievements-list" class="achievements-list">
+                    <!-- Los logros se agregarán dinámicamente -->
+                </div>
+            </div>
+
+            <button id="back-to-menu-from-profile-btn" class="back-btn">VOLVER</button>
+        </div>
+    </div>
+
+    <!-- Ajustes -->
+    <div id="settings" class="settings" style="display: none;">
+        <div class="settings-container">
+            <h2>AJUSTES</h2>
+
+            <div class="settings-tabs">
+                <button class="tab-btn active" data-tab="game">JUEGO</button>
+                <button class="tab-btn" data-tab="controls">CONTROLES</button>
+                <button class="tab-btn" data-tab="audio">AUDIO</button>
+                <button class="tab-btn" data-tab="graphics">GRÁFICOS</button>
+            </div>
+
+            <div class="settings-content">
+                <!-- Ajustes de Juego -->
+                <div id="game-settings" class="settings-tab active">
+                    <div class="setting-item">
+                        <label>Nombre de usuario</label>
+                        <input type="text" id="settings-username" maxlength="20">
+                    </div>
+                    <div class="setting-item">
+                        <label>Idioma</label>
+                        <select id="settings-language">
+                            <option value="es">Español</option>
+                            <option value="en">English</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label>Mostrar minimapa</label>
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="settings-minimap" checked>
+                            <label for="settings-minimap"></label>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <label>Mostrar chat</label>
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="settings-chat" checked>
+                            <label for="settings-chat"></label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ajustes de Controles -->
+                <div id="controls-settings" class="settings-tab">
+                    <div class="setting-item">
+                        <label>Esquema de controles</label>
+                        <select id="settings-controls">
+                            <option value="wasd">WASD + Ratón</option>
+                            <option value="arrows">Flechas + Ratón</option>
+                            <option value="touch">Táctil (móvil)</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label>Sensibilidad del ratón</label>
+                        <input type="range" id="settings-sensitivity" min="1" max="10" value="5">
+                        <span id="sensitivity-value">5</span>
+                    </div>
+                    <div class="setting-item">
+                        <label>Invertir eje Y</label>
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="settings-invert-y">
+                            <label for="settings-invert-y"></label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ajustes de Audio -->
+                <div id="audio-settings" class="settings-tab">
+                    <div class="setting-item">
+                        <label>Volumen principal</label>
+                        <input type="range" id="settings-master-volume" min="0" max="100" value="70">
+                        <span id="master-volume-value">70%</span>
+                    </div>
+                    <div class="setting-item">
+                        <label>Volumen de efectos</label>
+                        <input type="range" id="settings-sfx-volume" min="0" max="100" value="80">
+                        <span id="sfx-volume-value">80%</span>
+                    </div>
+                    <div class="setting-item">
+                        <label>Volumen de música</label>
+                        <input type="range" id="settings-music-volume" min="0" max="100" value="60">
+                        <span id="music-volume-value">60%</span>
+                    </div>
+                </div>
+
+                <!-- Ajustes de Gráficos -->
+                <div id="graphics-settings" class="settings-tab">
+                    <div class="setting-item">
+                        <label>Calidad de gráficos</label>
+                        <select id="settings-quality">
+                            <option value="low">Baja</option>
+                            <option value="medium" selected>Media</option>
+                            <option value="high">Alta</option>
+                            <option value="ultra">Ultra</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label>Efectos de partículas</label>
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="settings-particles" checked>
+                            <label for="settings-particles"></label>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <label>Efectos de pantalla</label>
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="settings-screen-effects" checked>
+                            <label for="settings-screen-effects"></label>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <label>Mostrar FPS</label>
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="settings-show-fps">
+                            <label for="settings-show-fps"></label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-footer">
+                <button id="save-settings-btn" class="settings-btn save-btn">GUARDAR</button>
+                <button id="reset-settings-btn" class="settings-btn reset-btn">RESTABLECER</button>
+                <button id="back-to-menu-from-settings-btn" class="back-btn">VOLVER</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pantalla de Fin de Partida -->
+    <div id="game-over" class="game-over" style="display: none;">
+        <div class="game-over-container">
+            <h2 id="game-over-title">PARTIDA TERMINADA</h2>
+
+            <div class="game-over-stats">
+                <div class="stat-row">
+                    <span class="stat-label">Posición:</span>
+                    <span id="final-position" class="stat-value">1º</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Puntuación:</span>
+                    <span id="final-score" class="stat-value">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Eliminaciones:</span>
+                    <span id="final-kills" class="stat-value">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Muertes:</span>
+                    <span id="final-deaths" class="stat-value">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Experiencia ganada:</span>
+                    <span id="final-xp" class="stat-value">+0 XP</span>
+                </div>
+            </div>
+
+            <div class="game-over-buttons">
+                <button id="play-again-btn" class="game-over-btn primary-btn">JUGAR DE NUEVO</button>
+                <button id="back-to-menu-from-game-over-btn" class="game-over-btn">MENÚ PRINCIPAL</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notificaciones -->
+    <div id="notifications" class="notifications"></div>
+
+    <!-- Indicador de Carga -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p id="loading-text">Cargando...</p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/network.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/enemy.js"></script>
+    <script src="js/bullet.js"></script>
+    <script src="js/powerup.js"></script>
+    <script src="js/particles.js"></script>
+    <script src="js/gameModes.js"></script>
+    <script src="js/leaderboard.js"></script>
+    <script src="js/game.js"></script>
 </body>
+
 </html>
